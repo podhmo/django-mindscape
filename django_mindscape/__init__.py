@@ -91,6 +91,7 @@ class Walker(object):
 
 class ReverseWalker(object):
     def __init__(self, walker, models=None):
+        self.walker = walker
         self.toplevel = []
         self.cache = {}  # moel -> rnode
         self.models = models or walker.active_models
@@ -159,21 +160,22 @@ class ModelMapProvider(object):
 
     @cached_property
     def rwalker(self):
+        self.dependencies  # hmm
         return ReverseWalker(self.walker)
 
     @cached_property
     def reverse_dependencies(self):
         """model to children"""
         self.rwalker.walkall()
-        return self.rwalker.cache
+        return self.rwalker.cache  # model -> RNode
 
     @cached_property
     def ordered_models(self):
         """flatten ordered model's  list"""
-        return [x for xs in self.clustered_models for x in xs]
+        return [x for xs in self.cluster_models for x in xs]
 
     @cached_property
-    def clustered_models(self):
-        """list of clustered ordered model's list"""
+    def cluster_models(self):  # todo:rename
+        """list of cluster ordered model's list"""
         self.reverse_dependencies  # hmm
         return ordering_from_rwalker(self.rwalker)
