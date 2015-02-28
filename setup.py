@@ -16,7 +16,7 @@ except IOError:
 
 
 install_requires = [
-    'setuptools',
+    'django>=1.7',
 ]
 
 
@@ -32,7 +32,7 @@ testing_extras = tests_require + [
 
 setup(name='django-mindscape',
       version='0.1',
-      description='traversing models',
+      description='a library traversing django models',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
           "Programming Language :: Python",
@@ -42,7 +42,7 @@ setup(name='django-mindscape',
       author="",
       author_email="",
       url="",
-      packages=find_packages(),
+      packages=find_packages(exclude=["tests"]),
       include_package_data=True,
       zip_safe=False,
       install_requires=install_requires,
