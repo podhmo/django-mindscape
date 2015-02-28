@@ -23,9 +23,12 @@ class Brain(object):  # bad name..
     def is_skip(self, m):
         return m._meta.abstract
 
+    def is_foreinkey(self, f):
+        return f.rel is not None
+
     def collect_dependencies(self, m):
         for f in m._meta.local_fields:
-            if f.rel is not None:
+            if self.is_foreinkey(f):
                 yield f
         for f in m._meta.local_many_to_many:
             yield f
@@ -155,6 +158,10 @@ def ordering(walker, models=None):
 class ModelMapProvider(object):
     def __init__(self, walker):
         self.walker = walker
+
+    @property
+    def brain(self):
+        return self.walker.brain
 
     @cached_property
     def dependencies(self):
