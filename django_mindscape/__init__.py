@@ -16,7 +16,7 @@ from django.utils.functional import cached_property
 
 Node = namedtuple("Node", "model dependencies")
 RNode = namedtuple("RNode", "node dependencies")
-Relation = namedtuple("Relation", "name from_ to type backref")
+Relation = namedtuple("Relation", "name from_ to type backref through")
 
 
 class Brain(object):  # bad name..
@@ -51,12 +51,18 @@ class Brain(object):  # bad name..
             return None
         return backref
 
+    def detect_through(self, fk, reltype):
+        if reltype != "MM":
+            return None
+        return fk.rel.through
+
 
 class Walker(object):
     def __init__(self, models, brain=Brain()):
         self.models = models
         self.brain = brain
         self.history = OrderedDict()  # model -> Node
+        self.through_models = {}
 
     @property
     def active_models(self):
@@ -85,7 +91,12 @@ class Walker(object):
                 continue
             ref = self.brain.detect_ref_name(fk)
             backref = self.brain.detect_backref_name(fk)
-            relation = Relation(name=ref, type=type_, from_=node, to=to_node, backref=backref)
+            through = self.brain.detect_through(fk, type_)
+            if through is not None:
+                through_model = through
+                through = self.walk(through_model)
+                self.through_models[through_model] = through
+            relation = Relation(name=ref, type=type_, from_=node, to=to_node, backref=backref, through=through)
             parents.append(relation)
         return node
 
@@ -162,6 +173,9 @@ class ModelMapProvider(object):
     @property
     def brain(self):
         return self.walker.brain
+
+    def is_through_model(self, model):
+        return model in self.walker.through_models
 
     @cached_property
     def dependencies(self):

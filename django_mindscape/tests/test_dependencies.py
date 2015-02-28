@@ -116,14 +116,22 @@ class ManyToManyTests(unittest.TestCase):
                 app_label = "myapp2"
 
         class Member(models.Model):
-            group_set = models.ManyToManyField(Group, through="group_to_member")
+            group_set = models.ManyToManyField(Group, through="GroupToMember")
             name = models.CharField(max_length=255, null=False, default="")
+
+            class Meta:
+                app_label = "myapp2"
+
+        class GroupToMember(models.Model):
+            member = models.ForeignKey(Member)
+            group = models.ForeignKey(Group)
 
             class Meta:
                 app_label = "myapp2"
 
         cls.Group = Group
         cls.Member = Member
+        cls.GroupToMember = GroupToMember
 
     def _get_models(self):
         return [self.Group, self.Member]
@@ -147,6 +155,13 @@ class ManyToManyTests(unittest.TestCase):
 
         backref = walker[self.Member].dependencies[0].backref
         self.assertEqual(backref, "member_set")
+
+    def test_relation_through(self):
+        walker = self._makeOne(self._get_models())
+        walker.walkall()
+
+        through = walker[self.Member].dependencies[0].through
+        self.assertEqual(through.model, self.GroupToMember)
 
 
 @test_target("django_mindscape:Walker")
