@@ -11,7 +11,7 @@ features
 - collecting information about reverse dependencies of models (model -> [children])
 - listing model with dependencies-considered order.
 
-(`dependencies-considered order` means, 'when i < j, modelis[i] doesn't depends on models[j]')
+(`dependencies-considered order` means, when i < j, models[i] doesn't depends on models[j])
 
 how to use
 ----------------------------------------
@@ -21,11 +21,12 @@ how to use
     from django_mindscape import ModelMapProvider, Walker, Brain
     from django.apps import apps
 
-    walker = Walker(apps.get_models(), brain=Brain, bidirection=False)
+    walker = Walker(apps.get_models(), brain=Brain(), bidirection=False)
     p = ModelMapProvider(walker)
 
     """
     when ParentModel : YourModel = 1 : N
+    and OtherModel is existed.
     """
 
     # model dependencies (bottom up)
