@@ -34,7 +34,7 @@ class Tests(unittest.TestCase):
 
     def _makeOne(self, models):
         from django_mindscape import Walker, Brain
-        walker = Walker(models, brain=Brain(), bidirection=False)
+        walker = Walker(models, brain=Brain())
         return self._getTarget()(walker)
 
     def test_it_dependencies(self):

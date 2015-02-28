@@ -21,7 +21,7 @@ how to use
     from django_mindscape import ModelMapProvider, Walker, Brain
     from django.apps import apps
 
-    walker = Walker(apps.get_models(), brain=Brain(), bidirection=False)
+    walker = Walker(apps.get_models(), brain=Brain())
     p = ModelMapProvider(walker)
 
     """

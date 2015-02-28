@@ -48,6 +48,60 @@ class ForeignKeyTests(unittest.TestCase):
         reltype = walker[self.Member].dependencies[0].type
         self.assertEqual(reltype, "M1")
 
+    def test_relation_name(self):
+        walker = self._makeOne(self._get_models())
+        walker.walkall()
+
+        name = walker[self.Member].dependencies[0].name
+        self.assertEqual(name, "group")
+
+    def test_relation_backref(self):
+        walker = self._makeOne(self._get_models())
+        walker.walkall()
+
+        backref = walker[self.Member].dependencies[0].backref
+        self.assertEqual(backref, "member_set")
+
+
+@test_target("django_mindscape:Walker")
+class RelatedNameTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from django.db import models
+
+        class Group(models.Model):
+            name = models.CharField(max_length=255, null=False, default="")
+
+            class Meta:
+                app_label = "myappp"
+
+        class Member(models.Model):
+            group = models.ForeignKey(Group, related_name="+")
+            name = models.CharField(max_length=255, null=False, default="")
+
+            class Meta:
+                app_label = "myappp"
+
+        cls.Group = Group
+        cls.Member = Member
+
+    def _get_models(self):
+        return [self.Group, self.Member]
+
+    def test_relation_name(self):
+        walker = self._makeOne(self._get_models())
+        walker.walkall()
+
+        name = walker[self.Member].dependencies[0].name
+        self.assertEqual(name, "group")
+
+    def test_relation_backref(self):
+        walker = self._makeOne(self._get_models())
+        walker.walkall()
+
+        backref = walker[self.Member].dependencies[0].backref
+        self.assertEqual(backref, None)
+
 
 @test_target("django_mindscape:Walker")
 class ManyToManyTests(unittest.TestCase):
@@ -62,7 +116,7 @@ class ManyToManyTests(unittest.TestCase):
                 app_label = "myapp2"
 
         class Member(models.Model):
-            group = models.ManyToManyField(Group, through="group_to_member")
+            group_set = models.ManyToManyField(Group, through="group_to_member")
             name = models.CharField(max_length=255, null=False, default="")
 
             class Meta:
@@ -79,6 +133,20 @@ class ManyToManyTests(unittest.TestCase):
         walker.walkall()
         reltype = walker[self.Member].dependencies[0].type
         self.assertEqual(reltype, "MM")
+
+    def test_relation_name(self):
+        walker = self._makeOne(self._get_models())
+        walker.walkall()
+
+        name = walker[self.Member].dependencies[0].name
+        self.assertEqual(name, "group_set")
+
+    def test_relation_backref(self):
+        walker = self._makeOne(self._get_models())
+        walker.walkall()
+
+        backref = walker[self.Member].dependencies[0].backref
+        self.assertEqual(backref, "member_set")
 
 
 @test_target("django_mindscape:Walker")
@@ -111,3 +179,17 @@ class OneToOneTests(unittest.TestCase):
         walker.walkall()
         reltype = walker[self.Member].dependencies[0].type
         self.assertEqual(reltype, "11")
+
+    def test_relation_name(self):
+        walker = self._makeOne(self._get_models())
+        walker.walkall()
+
+        name = walker[self.Member].dependencies[0].name
+        self.assertEqual(name, "group")
+
+    def test_relation_backref(self):
+        walker = self._makeOne(self._get_models())
+        walker.walkall()
+
+        backref = walker[self.Member].dependencies[0].backref
+        self.assertEqual(backref, "member")

@@ -16,7 +16,7 @@ from django.utils.functional import cached_property
 
 Node = namedtuple("Node", "model dependencies")
 RNode = namedtuple("RNode", "node dependencies")
-Relation = namedtuple("Relation", "name from_ to type")
+Relation = namedtuple("Relation", "name from_ to type backref")
 
 
 class Brain(object):  # bad name..
@@ -30,7 +30,8 @@ class Brain(object):  # bad name..
         for f in m._meta.local_many_to_many:
             yield f
 
-    def detect_reltype(self, rel):
+    def detect_reltype(self, fk):
+        rel = fk.rel
         if isinstance(rel, OneToOneRel):
             return "11"
         elif isinstance(rel, ManyToManyRel):
@@ -38,14 +39,21 @@ class Brain(object):  # bad name..
         elif isinstance(rel, ManyToOneRel):
             return "M1"
 
+    def detect_ref_name(self, fk):
+        return fk.name
+
+    def detect_backref_name(self, fk):
+        backref = fk.related.get_accessor_name()
+        if backref == "+":
+            return None
+        return backref
+
 
 class Walker(object):
-    def __init__(self, models, brain=Brain(), bidirection=False):
+    def __init__(self, models, brain=Brain()):
         self.models = models
         self.brain = brain
         self.history = OrderedDict()  # model -> Node
-        self.temporary = {}  # model -> None (for a case bidirection is True)
-        self.bidirection = bidirection
 
     @property
     def active_models(self):
@@ -68,19 +76,15 @@ class Walker(object):
         node = Node(model=m, dependencies=parents)
         self.history[m] = node
         for fk in self.brain.collect_dependencies(m):
-            type_ = self.brain.detect_reltype(fk.rel)
+            type_ = self.brain.detect_reltype(fk)
             to_node = self.walk(fk.rel.to)
             if to_node is None:
                 continue
-            relation = Relation(name=fk.name, type=type_, from_=node, to=to_node)
+            ref = self.brain.detect_ref_name(fk)
+            backref = self.brain.detect_backref_name(fk)
+            relation = Relation(name=ref, type=type_, from_=node, to=to_node, backref=backref)
             parents.append(relation)
-            if self.bidirection:
-                self._with_bidirection(node, fk)
         return node
-
-    def _with_bidirection(self, node, fk):
-        logger.debug("not supported")
-        pass
 
     def __getitem__(self, model):
         return self.history[model]
