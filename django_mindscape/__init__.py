@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 # (setenv "LC_ALL" "ja_JP.UTF-8")
-
+import sys
 import logging
 logger = logging.getLogger(__name__)
 from django.db.models import (
@@ -179,3 +179,36 @@ class ModelMapProvider(object):
         """list of cluster ordered model's list"""
         self.reverse_dependencies  # hmm
         return ordering_from_rwalker(self.rwalker)
+
+
+def _output(io, s):
+    io.write(s)
+    io.write("\n")
+
+
+def write_tree_all(walker, output=_output, io=sys.stderr):
+    for model in walker.active_models:
+        write_tree(walker, model, output=output, io=io)
+
+
+def write_tree(walker, model, output=_output, io=sys.stderr):
+    history = set()
+
+    def _write_tree(rel, indent):
+        k = (rel.name, rel.to.model)
+        if k in history:
+            return
+        history.add(k)
+
+        node = rel.to
+        model = node.model.__name__
+        name = rel.name
+        fmt = "{indent}{model}[{name}({reltype})]"
+        output(io, fmt.format(indent=" " * indent, model=model, name=name, reltype=rel.type))
+        for rel in node.dependencies:
+            _write_tree(rel, indent + 2)
+
+    output(io, model.__name__)
+    node = walker[model]
+    for relation in node.dependencies:
+        _write_tree(relation, 2)
