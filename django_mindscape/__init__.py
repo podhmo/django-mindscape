@@ -177,7 +177,7 @@ class ModelMapProvider(object):
     @cached_property
     def cluster_models(self):  # todo:rename
         """list of cluster ordered model's list"""
-        self.reverse_dependencies  # hmm
+        self.dependencies  # hmm
         return ordering_from_rwalker(self.rwalker)
 
 
