@@ -50,9 +50,9 @@ class Tests(unittest.TestCase):
         target = self._makeOne([self.Group, self.Member, self.Shop])
 
         rds = target.reverse_dependencies
-        self.assertEqual([rn.node.model for rn in rds[self.Group].children], [self.Member])
-        self.assertEqual(rds[self.Shop].children, [])
-        self.assertEqual(rds[self.Member].children, [])
+        self.assertEqual([rn.node.model for rn in rds[self.Group].dependencies], [self.Member])
+        self.assertEqual(rds[self.Shop].dependencies, [])
+        self.assertEqual(rds[self.Member].dependencies, [])
 
     def test_it_ordered_models(self):
         target = self._makeOne([self.Group, self.Member, self.Shop])

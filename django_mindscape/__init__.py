@@ -15,7 +15,7 @@ from collections import (
 from django.utils.functional import cached_property
 
 Node = namedtuple("Node", "model dependencies")
-RNode = namedtuple("RNode", "node children")
+RNode = namedtuple("RNode", "node dependencies")
 Relation = namedtuple("Relation", "name from_ to type")
 
 
@@ -64,8 +64,8 @@ class Walker(object):
 
     def _walk(self, m):
         logger.debug("walking: model=%s", m)
-        dependencies = []
-        node = Node(model=m, dependencies=dependencies)
+        parents = []
+        node = Node(model=m, dependencies=parents)
         self.history[m] = node
         for fk in self.brain.collect_dependencies(m):
             type_ = self.brain.detect_reltype(fk.rel)
@@ -73,7 +73,7 @@ class Walker(object):
             if to_node is None:
                 continue
             relation = Relation(name=fk.name, type=type_, from_=node, to=to_node)
-            dependencies.append(relation)
+            parents.append(relation)
             if self.bidirection:
                 self._with_bidirection(node, fk)
         return node
@@ -106,12 +106,12 @@ class ReverseWalker(object):
         if node.model in self.cache:
             return self.cache[node.model]
         children = []
-        rnode = RNode(node=node, children=children)
+        rnode = RNode(node=node, dependencies=children)
         self.cache[node.model] = rnode
         if not node.dependencies:
             self.toplevel.append(rnode)
         for rel in node.dependencies:
-            self.traverse(rel.to).children.append(rnode)
+            self.traverse(rel.to).dependencies.append(rnode)
         return rnode
 
     def __getitem__(self, model):
@@ -131,7 +131,7 @@ def ordering_from_rwalker(rwalker):
         for rel in rnode.node.dependencies:
             traverse(rwalker[rel.to.model], category)
         category.append(model)
-        for c in rnode.children:
+        for c in rnode.dependencies:
             traverse(c, category)
         return category
 
