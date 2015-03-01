@@ -36,7 +36,7 @@ how to use
         print(relation.type)  # relation type (candidates: 11, 1M, MM)
 
     # reverse dependencies (top down)
-    for rnode in p.reverse_dependencies[ParentModel].children:
+    for rnode in p.reverse_dependencies[ParentModel].dependencies:
         print(rnode.node.model)  # <YourModel>
 
     # clustered model list
