@@ -141,20 +141,27 @@ def ordering_from_rwalker(rwalker):
     ordered_models = []
     rhistory = set()  # model
 
-    def traverse(rnode, category):
+    def traverse(rnode, category, queue):
         model = rnode.node.model
         if model in rhistory:
+            # assert all(rel.to.model in category for rel in rnode.node.dependencies if not rnode.node.model == rel.to.model)
             return category
         rhistory.add(model)
         for rel in rnode.node.dependencies:
-            traverse(rwalker[rel.to.model], category)
+            traverse(rwalker[rel.to.model], category, queue)
+        # assert all(rel.to.model in category for rel in rnode.node.dependencies if not rnode.node.model == rel.to.model)
         category.append(model)
         for c in rnode.dependencies:
-            traverse(c, category)
+            queue.append(c)
         return category
 
     for rnode in rwalker.toplevel:
-        category = traverse(rnode, [])
+        category = []
+        queue = []
+        category = traverse(rnode, category, queue)
+        while queue:
+            rnode_ = queue.pop(0)
+            traverse(rnode_, category, queue)
         if not category:
             continue
         ordered_models.append(category)
