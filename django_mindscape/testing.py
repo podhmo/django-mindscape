@@ -1,25 +1,10 @@
 # -*- coding:utf-8 -*-
-def get_connection():
-    "get default database connection"
-    from django.db import connections
-    connection = connections['default']
-    return connection
-
-
-def get_cursor(connection):
-    "get database cursor from connection"
-    return connection.cursor()
-
-
-def get_style():
-    from django.core.management.color import no_style
-    return no_style()
-
-
 def create_table(model):
-    connection = get_connection()
-    cursor = get_cursor(connection)
-    style = get_style()
+    from django.db import connections
+    from django.core.management.color import no_style
+    connection = connections['default']
+    cursor = connection.cursor()
+    style = no_style()
 
     sql, references = connection.creation.sql_create_model(
         model, style)

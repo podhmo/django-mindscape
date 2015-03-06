@@ -2,7 +2,6 @@
 # (setenv "LC_ALL" "ja_JP.UTF-8")
 import sys
 import logging
-logger = logging.getLogger(__name__)
 from django.db.models import (
     ManyToOneRel,
     OneToOneRel,
@@ -11,12 +10,14 @@ from django.db.models import (
 from collections import (
     namedtuple,
     OrderedDict,
+    defaultdict
 )
 from django.utils.functional import cached_property
+logger = logging.getLogger(__name__)
 
 Node = namedtuple("Node", "model dependencies")
 RNode = namedtuple("RNode", "node dependencies")
-Relation = namedtuple("Relation", "name from_ to type backref through")
+Relation = namedtuple("Relation", "name from_ to type backref through fkname")
 
 
 class Brain(object):  # bad name..
@@ -25,6 +26,10 @@ class Brain(object):  # bad name..
 
     def is_foreinkey(self, f):
         return f.rel is not None
+
+    def fkname_from_field(self, f):
+        suffix = f.db_column or "_id"
+        return f.name + suffix
 
     def collect_dependencies(self, m):
         for f in m._meta.local_fields:
@@ -96,7 +101,8 @@ class Walker(object):
                 through_model = through
                 through = self.walk(through_model)
                 self.through_models[through_model] = through
-            relation = Relation(name=ref, type=type_, from_=node, to=to_node, backref=backref, through=through)
+            fkname = self.brain.fkname_from_field(fk)
+            relation = Relation(name=ref, type=type_, from_=node, to=to_node, backref=backref, through=through, fkname=fkname)
             parents.append(relation)
         return node
 
@@ -244,3 +250,46 @@ def write_tree(walker, model, output=_output, io=sys.stderr):
     node = walker[model]
     for relation in node.dependencies:
         _write_tree(relation, 2)
+
+
+# experimental
+
+class Collector(object):
+    def __init__(self, mmprovider):
+        self.mmprovider = mmprovider
+        self.brain = mmprovider.brain
+        self.identity_map = defaultdict(dict)  # model -> pk -> object
+
+    def collect(self, ob):
+        return self._collect(ob, set())
+
+    def get_related_object(self, ob, fk, relname):
+        ob_map = self.identity_map[ob.__class__]
+        try:
+            return ob_map[fk]
+        except KeyError:
+            v = ob_map[fk] = getattr(ob, relname)
+            return v
+
+    def _collect(self, ob, r):
+        if ob in r:
+            return r
+        r.add(ob)
+        model = ob.__class__
+        for relation in self.mmprovider.dependencies[model].dependencies:
+            if relation.type == "MM":
+                for relob in getattr(ob, relation.name).all():
+                    self._collect(relob, r)
+            else:
+                fk = getattr(ob, relation.fkname)
+                relob = self.get_related_object(ob, fk, relation.name)
+                self._collect(relob, r)
+
+        # for MM
+        for rnode in self.mmprovider.reverse_dependencies[model].dependencies:
+            for relation in rnode.node.dependencies:
+                if relation.type == "MM" and relation.to.model == model:
+                    for relob in getattr(ob, relation.backref).all():
+                        self._collect(relob, r)
+
+        return r
