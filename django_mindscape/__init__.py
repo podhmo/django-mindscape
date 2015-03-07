@@ -268,7 +268,7 @@ class Collector(object):
         try:
             return ob_map[fk]
         except KeyError:
-            v = ob_map[fk] = getattr(ob, relname)
+            v = ob_map[fk] = getattr(ob, relname, None)
             return v
 
     def _collect(self, ob, r):
@@ -283,7 +283,8 @@ class Collector(object):
             else:
                 fk = getattr(ob, relation.fkname)
                 relob = self.get_related_object(ob, fk, relation.name)
-                self._collect(relob, r)
+                if relob is not None:
+                    self._collect(relob, r)
 
         # for MM
         for rnode in self.mmprovider.reverse_dependencies[model].dependencies:

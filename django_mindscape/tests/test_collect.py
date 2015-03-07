@@ -44,6 +44,21 @@ class Tests(unittest.TestCase):
             self.assertIn(g1, result)
             self.assertIn(g, result)
 
+    def test_it_with_missing_sample(self):
+        with with_rollback():
+            g1, = Grade.objects.bulk_create([
+                Grade(id=1, name="1"),
+            ])
+            hp, rw = Member.objects.bulk_create([
+                Member(id=1, name="HP", grade=g1),
+                Member(id=2, name="RW", grade=g1),
+            ])
+            target = self._makeOne([Group, Member, Grade])
+            result = target.collect(hp)
+
+            self.assertIn(hp, result)
+            self.assertIn(g1, result)
+
     def test_it_manytomany_sample(self):
         with with_rollback():
             """

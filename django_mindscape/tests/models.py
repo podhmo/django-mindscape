@@ -14,7 +14,7 @@ class Group(models.Model):
 
 
 class Grade(models.Model):
-    group = models.ForeignKey(Group)
+    group = models.ForeignKey(Group, null=True)
     name = models.CharField(max_length=255, null=False, default="")
 
 
