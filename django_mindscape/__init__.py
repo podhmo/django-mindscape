@@ -304,11 +304,11 @@ def get_walker(models=None, brain=None):
     return Walker(models, brain=brain or Brain())
 
 
-def get_model_map_provider(models=None, brain=None):
+def get_mmprovider(models=None, brain=None):
     walker = get_walker(models, brain)
     return ModelMapProvider(walker)
 
 
-def get_related_object_collector(models=None, brain=None):
-    mmprovider = get_model_map_provider(models, brain)
+def get_collector(models=None, brain=None):
+    mmprovider = get_mmprovider(models, brain)
     return Collector(mmprovider)
