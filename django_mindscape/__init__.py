@@ -293,3 +293,21 @@ class Collector(object):
                         self._collect(relob, r)
 
         return r
+
+
+# shortcut function
+def get_walker(models=None, brain=None):
+    if models is None:
+        from django.apps import apps
+        models = apps.get_models()
+    return Walker(models, brain=brain or Brain())
+
+
+def get_model_map_provider(models=None, brain=None):
+    walker = get_walker(models, brain)
+    return ModelMapProvider(walker)
+
+
+def get_related_object_collector(models=None, brain=None):
+    mmprovider = get_model_map_provider(models, brain)
+    return Collector(mmprovider)
