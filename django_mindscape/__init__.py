@@ -9,16 +9,34 @@ from django.db.models import (
     ManyToManyRel
 )
 from collections import (
-    namedtuple,
     OrderedDict,
     defaultdict
 )
 from django.utils.functional import cached_property
 logger = logging.getLogger(__name__)
 
-Node = namedtuple("Node", "model dependencies")
-RNode = namedtuple("RNode", "node dependencies")
-Relation = namedtuple("Relation", "name from_ to type backref through fkname")
+
+class Node(object):
+    def __init__(self, model, dependencies):
+        self.model = model
+        self.dependencies = dependencies
+
+
+class RNode(object):
+    def __init__(self, node, dependencies):
+        self.node = node
+        self.dependencies = dependencies
+
+
+class Relation(object):
+    def __init__(self, name, type, from_, to, backref, through, fkname):
+        self.name = name
+        self.from_ = from_
+        self.to = to
+        self.type = type
+        self.backref = backref
+        self.through = through
+        self.fkname = fkname
 
 
 class Brain(object):  # bad name..
