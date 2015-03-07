@@ -2,6 +2,7 @@
 # (setenv "LC_ALL" "ja_JP.UTF-8")
 import sys
 import logging
+from functools import lru_cache
 from django.db.models import (
     ManyToOneRel,
     OneToOneRel,
@@ -48,8 +49,8 @@ class Brain(object):  # bad name..
             return "M1"
 
     def detect_reverse_reltype(self, reltype):
-        if reltype == "1M":
-            return "M1"
+        if reltype == "M1":
+            return "1M"
         return reltype
 
     def detect_reverse_foreignkey(self, model, name, rtype):
@@ -323,29 +324,36 @@ class Collector(object):
         self.brain = mmprovider.brain
         self.identity_map = defaultdict(dict)  # model -> pk -> object
 
+    @lru_cache()
     def collect(self, ob):
         return self._collect(ob, set())
 
-    def get_related_object(self, ob, fk, relname):
-        ob_map = self.identity_map[ob.__class__]
+    def get_related_object(self, ob, fk, relation):
+        ob_map = self.identity_map[relation.to.model]
         try:
             return ob_map[fk]
         except KeyError:
-            v = ob_map[fk] = getattr(ob, relname, None)
+            v = ob_map[fk] = getattr(ob, relation.name, None)
             return v
 
-    def _collect(self, ob, r):
+    def _collect(self, ob, r, see_related=True):
         if ob in r:
             return r
         r.add(ob)
         model = ob.__class__
+        mm_history = set()
         for relation in self.mmprovider.dependencies[model].dependencies:
-            if relation.type == "MM":
+            if relation.type == "MM" and see_related:
+                mm_history.add((ob.__class__, relation.name))
                 for relob in getattr(ob, relation.name).all():
-                    self._collect(relob, r)
-            else:
-                fk = getattr(ob, relation.fkname)
-                relob = self.get_related_object(ob, fk, relation.name)
+                    self._collect(relob, r, see_related=False)
+            elif relation.type == "M1" or relation.type == "11":
+                if relation.fkname:
+                    fk = getattr(ob, relation.fkname)
+                    relob = self.get_related_object(ob, fk, relation)
+                else:
+                    relob = getattr(ob, relation.name)
+                    self.identity_map[relob.__module__][getattr(relob, "id", None) or object()] = relob  # hmm
                 if relob is not None:
                     self._collect(relob, r)
 
@@ -353,8 +361,9 @@ class Collector(object):
         for rnode in self.mmprovider.reverse_dependencies[model].dependencies:
             for relation in rnode.node.dependencies:
                 if relation.type == "MM" and relation.to.model == model:
-                    for relob in getattr(ob, relation.backref).all():
-                        self._collect(relob, r)
+                    if (ob.__class__, relation.backref) not in mm_history:
+                        for relob in getattr(ob, relation.backref).all():
+                            self._collect(relob, r)
 
         return r
 
