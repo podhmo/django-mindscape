@@ -47,6 +47,19 @@ class Brain(object):  # bad name..
         elif isinstance(rel, ManyToOneRel):
             return "M1"
 
+    def detect_reverse_reltype(self, reltype):
+        if reltype == "1M":
+            return "M1"
+        return reltype
+
+    def detect_reverse_foreignkey(self, model, name, rtype):
+        if rtype == "MM":
+            for f in model._meta.many_to_many:
+                if f.name == name:
+                    return f
+            else:
+                return None
+
     def detect_ref_name(self, fk):
         return fk.name
 
@@ -97,11 +110,12 @@ class Walker(object):
             ref = self.brain.detect_ref_name(fk)
             backref = self.brain.detect_backref_name(fk)
             through = self.brain.detect_through(fk, type_)
+            fkname = self.brain.fkname_from_field(fk)
             if through is not None:
                 through_model = through
                 through = self.walk(through_model)
                 self.through_models[through_model] = through
-            fkname = self.brain.fkname_from_field(fk)
+                fkname = None
             relation = Relation(name=ref, type=type_, from_=node, to=to_node, backref=backref, through=through, fkname=fkname)
             parents.append(relation)
         return node
@@ -111,6 +125,55 @@ class Walker(object):
 
     def __contains__(self, model):
         return model in self.history
+
+
+class BidirectionalWalker(Walker):
+    def __init__(self, models, brain=Brain()):
+        super(BidirectionalWalker, self).__init__(models, brain)
+        self.related_node = {}
+
+    def get_node(self, model):
+        if model in self.related_node:
+            return self.related_node[model]
+        else:
+            v = self.related_node[model] = Node(model=model, dependencies=[])
+            return v
+
+    def walk(self, m, skip_reverse=False):
+        if m in self.history:
+            return self.history[m]
+        if self.brain.is_skip(m):
+            return
+        return self._walk(m, skip_reverse=skip_reverse)
+
+    def _walk(self, m, skip_reverse=False):
+        logger.debug("walking: model=%s", m)
+        node = self.get_node(m)
+        self.history[m] = node
+        for fk in self.brain.collect_dependencies(m):
+            type_ = self.brain.detect_reltype(fk)
+            to_node = self.walk(fk.rel.to)
+            if to_node is None:
+                continue
+            ref = self.brain.detect_ref_name(fk)
+            backref = self.brain.detect_backref_name(fk)
+            through = self.brain.detect_through(fk, type_)
+            fkname = self.brain.fkname_from_field(fk)
+            if through is not None:
+                through_model = through
+                through = self.walk(through_model, skip_reverse=True)
+                self.through_models[through_model] = through
+                fkname = None
+            relation = Relation(name=ref, type=type_, from_=node, to=to_node, backref=backref, through=through, fkname=fkname)
+            if backref is not None and not skip_reverse:
+                if node not in to_node.dependencies:
+                    # reverse relation. to -> from
+                    rtype = self.brain.detect_reverse_reltype(type_)
+                    back_fkname = None  # xxx
+                    back_relation = Relation(name=backref, type=rtype, from_=to_node, to=node, backref=ref, through=through, fkname=back_fkname)
+                    to_node.dependencies.append(back_relation)
+            node.dependencies.append(relation)
+        return node
 
 
 class ReverseWalker(object):
@@ -297,7 +360,7 @@ class Collector(object):
 
 
 # shortcut function
-def get_walker(models=None, brain=None):
+def get_walker(models=None, brain=None, Walker=Walker):
     if models is None:
         from django.apps import apps
         models = apps.get_models()
@@ -310,5 +373,5 @@ def get_mmprovider(models=None, brain=None):
 
 
 def get_collector(models=None, brain=None):
-    mmprovider = get_mmprovider(models, brain)
-    return Collector(mmprovider)
+    walker = get_walker(models, brain, Walker=BidirectionalWalker)
+    return Collector(ModelMapProvider(walker))
