@@ -31,7 +31,7 @@ testing_extras = tests_require + [
 ]
 
 setup(name='django-mindscape',
-      version='0.2.1',
+      version='0.3.0',
       description='a library traversing django models',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
