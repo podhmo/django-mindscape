@@ -21,11 +21,17 @@ class Node(object):
         self.model = model
         self.dependencies = dependencies
 
+    def __repr__(self):
+        return "<Node model={!r} at {!r}>".format(self.model.__name__, hex(id(self)))
+
 
 class RNode(object):
     def __init__(self, node, dependencies):
         self.node = node
         self.dependencies = dependencies
+
+    def __repr__(self):
+        return "<RNode node={!r} at {!r}>".format(self.node, hex(id(self)))
 
 
 class Relation(object):
@@ -199,7 +205,8 @@ class ReverseWalker(object):
     def __init__(self, walker, models=None):
         self.walker = walker
         self.toplevel = []
-        self.cache = {}  # moel -> rnode
+        self.cache = OrderedDict()  # model -> rnode
+        self.relname_map = {}  # (rnode, rnode) -> name
         self.models = models or walker.active_models
 
     def walkall(self):
@@ -217,7 +224,9 @@ class ReverseWalker(object):
         if not node.dependencies:
             self.toplevel.append(rnode)
         for rel in node.dependencies:
-            self.traverse(rel.to).dependencies.append(rnode)
+            parent = self.traverse(rel.to)
+            parent.dependencies.append(rnode)
+            self.relname_map[(parent, rnode)] = rel.backref
         return rnode
 
     def __getitem__(self, model):
