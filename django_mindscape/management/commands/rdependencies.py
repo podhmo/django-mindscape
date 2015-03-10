@@ -20,7 +20,7 @@ class Command(BaseCommand):
             history[rnode.node.model] = D
             D["model"] = formatter(rnode.node.model)
             if rnode.dependencies:
-                D["children"] = {rwalker.relname_map[(rnode, sub)]: rec(sub, OrderedDict()) for sub in rnode.dependencies}
+                D["children"] = {rwalker.rel_map[(rnode, sub)].backref: rec(sub, OrderedDict()) for sub in rnode.dependencies}
             return D
         return rec(rnode, OrderedDict())
 

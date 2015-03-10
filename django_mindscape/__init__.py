@@ -206,7 +206,7 @@ class ReverseWalker(object):
         self.walker = walker
         self.toplevel = []
         self.cache = OrderedDict()  # model -> rnode
-        self.relname_map = {}  # (rnode, rnode) -> name
+        self.rel_map = {}  # (rnode, rnode) -> Relation
         self.models = models or walker.active_models
 
     def walkall(self):
@@ -226,7 +226,7 @@ class ReverseWalker(object):
         for rel in node.dependencies:
             parent = self.traverse(rel.to)
             parent.dependencies.append(rnode)
-            self.relname_map[(parent, rnode)] = rel.backref
+            self.rel_map[(parent, rnode)] = rel
         return rnode
 
     def __getitem__(self, model):

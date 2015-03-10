@@ -8,7 +8,6 @@ import json
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
-        make_option("-s", "--short", dest="short", action="store_true", default=False, help="using short format"),
         make_option("--label", dest="label", action="store_true", default=False, help="describe by label"),
     )
 
