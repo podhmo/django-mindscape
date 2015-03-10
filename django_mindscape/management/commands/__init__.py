@@ -1,4 +1,5 @@
 from django_mindscape import Brain
+from importlib import import_module
 
 
 class ExcludeDjango(Brain):
@@ -21,3 +22,11 @@ class Formatter(object):
             return self.short(m)
         else:
             return self.long(m)
+
+
+def get_model(modelpath):
+    module, name = modelpath.rsplit(".", 1)
+    try:
+        return getattr(import_module(module), name, None)
+    except ImportError:
+        return None

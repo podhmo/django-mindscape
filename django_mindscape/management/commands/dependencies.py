@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from . import ExcludeDjango, Formatter
+from . import ExcludeDjango, Formatter, get_model
 from django_mindscape import get_mmprovider
 from collections import OrderedDict
 from optparse import make_option
@@ -36,6 +36,12 @@ class Command(BaseCommand):
         formatter = Formatter(kwargs)
         r = []
         dependencies = mmprovider.dependencies
-        for m in dependencies.keys():
-            r.append(self.to_dict(formatter, dependencies, m, use_label=kwargs.get("label")))
+        target_models = list(map(get_model, apps))
+        if target_models:
+            for m in target_models:
+                if m is not None:
+                    r.append(self.to_dict(formatter, dependencies, m, use_label=kwargs.get("label")))
+        else:
+            for m in dependencies.keys():
+                r.append(self.to_dict(formatter, dependencies, m, use_label=kwargs.get("label")))
         print(json.dumps(r, indent=2, ensure_ascii=False))
